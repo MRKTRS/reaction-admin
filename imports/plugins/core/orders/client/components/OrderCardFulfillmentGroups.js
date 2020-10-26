@@ -13,8 +13,10 @@ import Address from "@reactioncommerce/components/Address/v1";
 import AddressForm from "@reactioncommerce/components/AddressForm/v1";
 import { withRouter } from "react-router-dom";
 import { i18next, Reaction } from "/client/api";
+import { useMutation } from "@apollo/react-hooks";
 import ConfirmButton from "/imports/client/ui/components/ConfirmButton";
 import cancelOrderItemMutation from "../graphql/mutations/cancelOrderItem";
+import updateAddress from '../graphql/mutations/updateAddress';
 import OrderCardFulfillmentGroupItem from "./OrderCardFulfillmentGroupItem";
 import OrderCardFulfillmentGroupTrackingNumber from "./OrderCardFulfillmentGroupTrackingNumber";
 import OrderCardFulfillmentGroupStatusButton from "./OrderCardFulfillmentGroupStatusButton";
@@ -172,15 +174,19 @@ class OrderCardFulfillmentGroups extends Component {
 
     const { fulfillmentGroup, orderId } = this.props;
 
+    const [mutation] = useMutation(updateAddress);
+
     mutation({
       variables: {
         orderFulfillmentGroupId: fulfillmentGroup._id,
         orderId,
-        tracking
+        address: value,
       }
     });
 
     this.setState({ isProcessing: false });
+
+    resolve(value)
   })
 
   renderAddressForm = (shippingAddress, fulfillmentGroup) => {
