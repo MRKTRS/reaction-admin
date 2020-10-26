@@ -10,14 +10,18 @@ import Grid from "@material-ui/core/Grid";
 import Hidden from "@material-ui/core/Hidden";
 import Typography from "@material-ui/core/Typography";
 import Address from "@reactioncommerce/components/Address/v1";
+import AddressForm from "@reactioncommerce/components/AddressForm/v1";
 import { withRouter } from "react-router-dom";
 import { i18next, Reaction } from "/client/api";
+import { useMutation } from "@apollo/react-hooks";
 import ConfirmButton from "/imports/client/ui/components/ConfirmButton";
 import cancelOrderItemMutation from "../graphql/mutations/cancelOrderItem";
+import updateAddress from '../graphql/mutations/updateAddress';
 import OrderCardFulfillmentGroupItem from "./OrderCardFulfillmentGroupItem";
 import OrderCardFulfillmentGroupTrackingNumber from "./OrderCardFulfillmentGroupTrackingNumber";
 import OrderCardFulfillmentGroupStatusButton from "./OrderCardFulfillmentGroupStatusButton";
 import OrderStatusChip from "./OrderStatusChip";
+import locales from "./locales.json";
 
 const styles = (theme) => ({
   fulfillmentGroupHeader: {
@@ -159,6 +163,49 @@ class OrderCardFulfillmentGroups extends Component {
     return null;
   }
 
+  state = {
+    isProcessing: false,
+  }
+
+  addressForm = null
+
+  updateAddress = (value) => new Promise((resolve, reject) => {
+    this.setState({ isProcessing: true });
+
+    const { fulfillmentGroup, orderId } = this.props;
+
+    const [mutation] = useMutation(updateAddress);
+
+    mutation({
+      variables: {
+        orderFulfillmentGroupId: fulfillmentGroup._id,
+        orderId,
+        address: value,
+      }
+    });
+
+    this.setState({ isProcessing: false });
+
+    resolve(value)
+  })
+
+  renderAddressForm = (shippingAddress, fulfillmentGroup) => {
+    const isEditable = fulfillmentGroup.status === "new";
+
+    if (isEditable) {
+      return (
+        <div>
+          <AddressForm value={shippingAddress} onSubmit={this.updateAddress} ref={(formEl) => { this.addressForm = formEl; }} locales={locales} />
+          <Button onClick={() => { this.addressForm.submit(); }} isWaiting={this.state.isProcessing}>Submit</Button>
+        </div>
+      );
+    } else {
+      return (
+        <Address address={shippingAddress} />
+      );
+    }
+  }
+
   render() {
     const { classes, order } = this.props;
     const { fulfillmentGroups } = order;
@@ -219,8 +266,10 @@ class OrderCardFulfillmentGroups extends Component {
                         <Typography paragraph variant="h4">
                           {i18next.t("order.shippingAddress", "Shipping address")}
                         </Typography>
-                        <Address address={shippingAddress} />
+
+                        {this.renderAddressForm(shippingAddress)}
                       </Grid>
+
                       <Grid item xs={12} md={12}>
                         <Typography paragraph variant="h4">
                           {i18next.t("order.shippingMethod", "Shipping method")}
